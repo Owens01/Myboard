@@ -1,0 +1,25 @@
+{
+  "name": "Board Decision",
+  "description": "Takes a summary plus the deterministic risk tag and proposes a route with an action brief.",
+  "version": 1,
+  "project_id": "boardagents",
+  "components": [
+    { "id": "finding", "provider": "webhook", "config": {} },
+    {
+      "id": "decider",
+      "provider": "llm_openai",
+      "config": {
+        "profile": "openai-5-2",
+        "apikey": "${ROCKETRIDE_OPENAI_API_KEY}",
+        "temperature": 0.2
+      },
+      "input": [{ "lane": "questions", "from": "finding" }]
+    },
+    {
+      "id": "decision",
+      "provider": "response",
+      "config": { "laneName": "text" },
+      "input": [{ "lane": "answers", "from": "decider" }]
+    }
+  ]
+}

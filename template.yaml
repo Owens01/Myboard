@@ -1,0 +1,248 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Boardagents - autonomous board member for founders with no board
+
+Parameters:
+  BedrockApiKey:
+    Type: String
+    NoEcho: true
+    Description: Bedrock API key (bearer token) from the bedrock-mantle console
+    Default: ''
+  AdminToken:
+    Type: String
+    NoEcho: true
+    Description: Token guarding pause/resume/reset (X-Boardagents-Token)
+    Default: ''
+  BedrockRegion:
+    Type: String
+    Default: ap-south-1
+  UseFakeLlm:
+    Type: String
+    Default: 'true'
+    AllowedValues: ['true', 'false']
+
+Globals:
+  Function:
+    Runtime: python3.12
+    Architectures: [arm64]
+    Timeout: 30
+    MemorySize: 512
+    Environment:
+      Variables:
+        FINDINGS_TABLE: !Ref FindingsTable
+        AUDIT_TABLE: !Ref AuditTable
+        FEED_TABLE: !Ref FeedTable
+        MEETINGS_TABLE: !Ref MeetingsTable
+        ARTIFACTS_BUCKET: !Ref ArtifactsBucket
+        BEDROCK_REGION: !Ref BedrockRegion
+        BEDROCK_API_KEY: !Ref BedrockApiKey
+        USE_FAKE_LLM: !Ref UseFakeLlm
+        # Tiers discovered live from GET /v1/models in Phase 0 (three model families).
+        MODEL_SMALL: zai.glm-4.7-flash
+        MODEL_STRONG: deepseek.v3.2
+        MODEL_CODE: qwen.qwen3-coder-next
+        # Board room seats: a fourth and fifth family, so every seat routes differently.
+        MODEL_ANALYST: mistral.magistral-small-2509
+        MODEL_ANALYST2: google.gemma-3-27b-it
+        LLM_TIMEOUT_S: '60'
+        MAX_LLM_CALLS_PER_FINDING: '25'
+        PYTHONPATH: /var/task
+
+Resources:
+  FindingsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub boardagents-findings-${AWS::StackName}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions: [{AttributeName: finding_id, AttributeType: S}]
+      KeySchema: [{AttributeName: finding_id, KeyType: HASH}]
+
+  AuditTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub boardagents-audit-${AWS::StackName}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - {AttributeName: finding_id, AttributeType: S}
+        - {AttributeName: ts_seq, AttributeType: S}
+      KeySchema:
+        - {AttributeName: finding_id, KeyType: HASH}
+        - {AttributeName: ts_seq, KeyType: RANGE}
+
+  FeedTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub boardagents-feed-${AWS::StackName}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions: [{AttributeName: event_id, AttributeType: S}]
+      KeySchema: [{AttributeName: event_id, KeyType: HASH}]
+
+  MeetingsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub boardagents-meetings-${AWS::StackName}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions: [{AttributeName: meeting_id, AttributeType: S}]
+      KeySchema: [{AttributeName: meeting_id, KeyType: HASH}]
+      Tags: [{Key: project, Value: boardagents}]
+
+  ArtifactsBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      BucketName: !Sub boardagents-artifacts-${AWS::StackName}-${AWS::AccountId}
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  WorkerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub boardagents-worker-role-${AWS::StackName}
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: {Service: lambda.amazonaws.com}
+            Action: sts:AssumeRole
+      Tags: [{Key: project, Value: boardagents}]
+      Policies:
+        - PolicyName: worker
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: ['dynamodb:GetItem', 'dynamodb:PutItem', 'dynamodb:UpdateItem', 'dynamodb:Query', 'dynamodb:Scan', 'dynamodb:DeleteItem']
+                Resource:
+                  - !GetAtt FindingsTable.Arn
+                  - !GetAtt AuditTable.Arn
+                  - !GetAtt FeedTable.Arn
+                  - !GetAtt MeetingsTable.Arn
+              - Effect: Allow
+                Action: ['s3:GetObject', 's3:PutObject']
+                Resource: !Sub ${ArtifactsBucket.Arn}/*
+              - Effect: Allow
+                Action: ['bedrock:InvokeModel', 'bedrock:InvokeModelWithResponseStream', 'bedrock:Converse', 'bedrock:ConverseStream']
+                Resource: !Sub arn:aws:bedrock:${BedrockRegion}::foundation-model/*
+              - Effect: Allow
+                Action: ['logs:CreateLogStream', 'logs:PutLogEvents']
+                Resource: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/boardagents-worker-${AWS::StackName}:*
+
+  ApiRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub boardagents-api-role-${AWS::StackName}
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: {Service: lambda.amazonaws.com}
+            Action: sts:AssumeRole
+      Tags: [{Key: project, Value: boardagents}]
+      Policies:
+        - PolicyName: api
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: ['dynamodb:GetItem', 'dynamodb:PutItem', 'dynamodb:Query', 'dynamodb:Scan', 'dynamodb:UpdateItem', 'dynamodb:DeleteItem', 'dynamodb:BatchWriteItem']
+                Resource:
+                  - !GetAtt FindingsTable.Arn
+                  - !GetAtt AuditTable.Arn
+                  - !GetAtt FeedTable.Arn
+                  - !GetAtt MeetingsTable.Arn
+              - Effect: Allow
+                Action: ['s3:GetObject', 's3:ListBucket']
+                Resource: [!GetAtt ArtifactsBucket.Arn, !Sub '${ArtifactsBucket.Arn}/*']
+              - Effect: Allow
+                Action: lambda:InvokeFunction
+                Resource: !GetAtt WorkerFunction.Arn
+              - Effect: Allow
+                Action: ['logs:CreateLogStream', 'logs:PutLogEvents']
+                Resource: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/boardagents-api-${AWS::StackName}:*
+
+  WorkerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub boardagents-worker-${AWS::StackName}
+      Handler: worker_handler.lambda_handler
+      CodeUri: src/
+      MemorySize: 1024
+      Timeout: 600
+      Role: !GetAtt WorkerRole.Arn
+      LoggingConfig: {LogGroup: !Ref WorkerLogGroup}
+  WorkerLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    Properties:
+      LogGroupName: !Sub /aws/lambda/boardagents-worker-${AWS::StackName}
+      RetentionInDays: 14
+
+  ApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub boardagents-api-${AWS::StackName}
+      Handler: api_handler.lambda_handler
+      CodeUri: src/
+      Timeout: 30
+      MemorySize: 512
+      Role: !GetAtt ApiRole.Arn
+      LoggingConfig: {LogGroup: !Ref ApiLogGroup}
+      Environment:
+        Variables:
+          WORKER_FUNCTION_NAME: !Ref WorkerFunction
+          ADMIN_TOKEN: !Ref AdminToken
+      FunctionUrlConfig:
+        AuthType: NONE
+        Cors:
+          AllowOrigins: ['*']
+          AllowHeaders: ['*']
+          AllowMethods: ['*']
+  ApiLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    Properties:
+      LogGroupName: !Sub /aws/lambda/boardagents-api-${AWS::StackName}
+      RetentionInDays: 14
+
+
+
+  MonitorRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Sub boardagents-monitor-${AWS::StackName}
+      Description: Boardagents monitor tick (disabled until demo hardening)
+      State: DISABLED
+      ScheduleExpression: 'rate(5 minutes)'
+      Targets:
+        - Id: worker
+          Arn: !GetAtt WorkerFunction.Arn
+
+  MonitorRulePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref WorkerFunction
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+
+Outputs:
+  DashboardUrl:
+    Value: !GetAtt ApiFunctionUrl.FunctionUrl
+    Description: Public Boardagents dashboard URL
+  WorkerFunctionName:
+    Value: !Ref WorkerFunction
+  ApiFunctionName:
+    Value: !Ref ApiFunction
+  FindingsTable:
+    Value: !Ref FindingsTable
+  AuditTable:
+    Value: !Ref AuditTable
+  FeedTable:
+    Value: !Ref FeedTable
+  MeetingsTable:
+    Value: !Ref MeetingsTable
+  ArtifactsBucket:
+    Value: !Ref ArtifactsBucket

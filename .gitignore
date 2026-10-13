@@ -1,0 +1,29 @@
+# secrets / local env
+.env
+.env*
+!.env.example
+*.pem
+# the founder's real situation: private, never committed (see operator_profile.example.json)
+operator_profile.json
+src/operator_profile.json
+# prompts are bundled into the Lambda package at deploy time (single source: prompts/)
+src/prompts/
+# build artifacts
+.aws-sam/
+__pycache__/
+*.pyc
+*.zip
+.venv/
+venv/
+# temp / logs
+/tmp/
+*.log
+.DS_Store
+
+# local-only, not part of the shipped repo
+DEMO_SCRIPT.md
+VOICEOVER.md
+.dashboard_url
+.board_thread
+repo_facts.json
+operator_profile.json

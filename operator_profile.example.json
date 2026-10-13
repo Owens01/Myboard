@@ -1,0 +1,15 @@
+{
+  "company": "Lumen Labs",
+  "stage": "pre-seed",
+  "team_size": 1,
+  "what_we_do": "SaaS tooling for small clinics; single founder, no board, no CFO, no CTO.",
+  "runway_months": 7,
+  "monthly_burn_usd": 900,
+  "current_focus": "Reach 100 paying clinics without breaking the billing flow.",
+  "hard_constraints": [
+    "No new headcount this year.",
+    "Cannot raise prices for existing customers mid-contract.",
+    "Any change touching billing or customer data needs the founder's explicit sign-off."
+  ],
+  "notes": "Copy this file to operator_profile.json and fill it in with real answers. That file is gitignored. The board uses it as context; it never invents facts about the company."
+}

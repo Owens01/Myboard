@@ -1,0 +1,25 @@
+{
+  "name": "Board Governance",
+  "description": "Reviews a diff against the deterministic checklist and returns concerns or a pass verdict.",
+  "version": 1,
+  "project_id": "boardagents",
+  "components": [
+    { "id": "diff", "provider": "webhook", "config": {} },
+    {
+      "id": "reviewer",
+      "provider": "llm_openai",
+      "config": {
+        "profile": "openai-5-4-mini",
+        "apikey": "${ROCKETRIDE_OPENAI_API_KEY}",
+        "temperature": 0
+      },
+      "input": [{ "lane": "questions", "from": "diff" }]
+    },
+    {
+      "id": "verdict",
+      "provider": "response",
+      "config": { "laneName": "text" },
+      "input": [{ "lane": "answers", "from": "reviewer" }]
+    }
+  ]
+}

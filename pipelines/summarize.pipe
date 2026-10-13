@@ -1,0 +1,25 @@
+{
+  "name": "Board Summarizer",
+  "description": "Turns a raw company signal into a grounded summary with confidence and evidence.",
+  "version": 1,
+  "project_id": "boardagents",
+  "components": [
+    { "id": "signal", "provider": "webhook", "config": {} },
+    {
+      "id": "summarizer",
+      "provider": "llm_openai",
+      "config": {
+        "profile": "openai-5-4-mini",
+        "apikey": "${ROCKETRIDE_OPENAI_API_KEY}",
+        "temperature": 0.2
+      },
+      "input": [{ "lane": "questions", "from": "signal" }]
+    },
+    {
+      "id": "summary",
+      "provider": "response",
+      "config": { "laneName": "text" },
+      "input": [{ "lane": "answers", "from": "summarizer" }]
+    }
+  ]
+}

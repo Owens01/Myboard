@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "exclude_authors": ["dependabot[bot]", "renovate[bot]"],
+  "ignore_patterns": ["docs/runs/**", "demo_company/tests/**", "src/demo_company/tests/**"],
+  "rules": [
+    {
+      "name": "Risk tags are code, never model output",
+      "description": "Risk tags and routes derive from core/policy.py only. Any diff that lets model text set risk_tag, bypass the policy engine, or act on sensitive findings autonomously is a violation."
+    },
+    {
+      "name": "Verification truth is a real test run",
+      "description": "A fix is verified only by a recorded pytest exit code. Any diff that marks verification passed without a subprocess or sandbox run result is a violation."
+    },
+    {
+      "name": "Evidence refs must exist in the payload",
+      "description": "Summarizer evidence.ref values must be keys that literally exist in the finding payload. New fields added to payloads must be documented so refs stay valid."
+    }
+  ],
+  "context_files": ["docs/PRODUCT_SPEC.md", "docs/architecture.md"]
+}

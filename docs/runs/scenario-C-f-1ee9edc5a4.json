@@ -1,0 +1,150 @@
+{
+  "decision": {
+    "model_confidence": 0.8,
+    "suggested_action": "escalate",
+    "action_brief": {
+      "goal": "Escalate to human for review due to lack of automated remediation guidance and potential need for contextual analysis.",
+      "target_paths": []
+    },
+    "confidence": 0.45,
+    "rationale": "The anomaly is a single data point with a -12% drop in signups on a national holiday, suggesting a temporary or seasonal disruption rather than a systemic issue. However, the remediation playbook explicitly states 'None; escalate to the human,' indicating no automated action is recommended, and human judgment is required for context assessment or further investigation."
+  },
+  "version": 4,
+  "summary": {
+    "confidence": 0.9,
+    "why_it_matters": "A sudden drop in signups of this magnitude, especially on a national holiday, may indicate a temporary disruption in user acquisition or a seasonal trend rather than a systemic failure.",
+    "what_happened": "A single data point indicates a -12% drop in signups on a specific day.",
+    "evidence": [
+      {
+        "ref": "title",
+        "quote": "Signups -12% on one day"
+      },
+      {
+        "ref": "delta_pct",
+        "quote": "-12"
+      },
+      {
+        "ref": "context",
+        "quote": "national holiday"
+      },
+      {
+        "ref": "data_points",
+        "quote": "1"
+      }
+    ],
+    "evidence_refs_validated": true
+  },
+  "created_at": 1789893390136,
+  "finding_id": "f-1ee9edc5a4",
+  "attempt_count": 0,
+  "route": "ESCALATE",
+  "source": "analytics",
+  "risk_tag": "low",
+  "state": "Escalated",
+  "updated_at": 1789893392872,
+  "payload": {
+    "title": "Signups -12% on one day",
+    "data_points": 1,
+    "context": "national holiday",
+    "delta_pct": -12
+  },
+  "event_type": "usage_anomaly",
+  "scenario": "C",
+  "event_id": "e-aaad84125c",
+  "audit": [
+    {
+      "ts": 1789893390144,
+      "payload": {
+        "source": "analytics",
+        "payload": {
+          "title": "Signups -12% on one day",
+          "data_points": 1,
+          "context": "national holiday",
+          "delta_pct": -12
+        }
+      },
+      "kind": "event",
+      "finding_id": "f-1ee9edc5a4",
+      "ts_seq": "1789893390144#f6a4cd5c"
+    },
+    {
+      "payload": {
+        "stage": "summarize",
+        "text_head": "```json\n{\n  \"what_happened\": \"A single data point indicates a -12% drop in signups on a specific day.\",\n  \"why_it_matters\": \"A sudden drop in signups of this magnitude, especially on a national holiday, may indicate a temporary disruption in user acquisition or a seasonal trend rather than a systemic failure.\",\n  \"confidence\": 0.9,\n  \"evidence\": [\n    {\n      \"ref\": \"title\",\n      \"quote\": \"Signup"
+      },
+      "ts": 1789893391080,
+      "stage": "summarize",
+      "latency_ms": 913,
+      "kind": "llm_call",
+      "finding_id": "f-1ee9edc5a4",
+      "tokens_out": 174,
+      "model_id": "zai.glm-4.7-flash",
+      "tokens_in": 137,
+      "ts_seq": "1789893391080#393497d4"
+    },
+    {
+      "payload": {
+        "version": 1,
+        "from": "Ingested",
+        "to": "Summarized",
+        "reason": "summary written"
+      },
+      "ts": 1789893391086,
+      "kind": "transition",
+      "finding_id": "f-1ee9edc5a4",
+      "ts_seq": "1789893391086#60641208"
+    },
+    {
+      "ts": 1789893391096,
+      "payload": {
+        "reason": "decision starting",
+        "from": "Summarized",
+        "version": 2,
+        "to": "Decided"
+      },
+      "kind": "transition",
+      "finding_id": "f-1ee9edc5a4",
+      "ts_seq": "1789893391096#a83c5407"
+    },
+    {
+      "ts": 1789893392856,
+      "payload": {
+        "stage": "decide",
+        "text_head": "{\n  \"suggested_action\": \"escalate\",\n  \"rationale\": \"The anomaly is a single data point with a -12% drop in signups on a national holiday, suggesting a temporary or seasonal disruption rather than a systemic issue. However, the remediation playbook explicitly states 'None; escalate to the human,' indicating no automated action is recommended, and human judgment is required for context assessment or"
+      },
+      "stage": "decide",
+      "latency_ms": 1747,
+      "kind": "llm_call",
+      "finding_id": "f-1ee9edc5a4",
+      "tokens_out": 139,
+      "model_id": "deepseek.v3.2",
+      "tokens_in": 324,
+      "ts_seq": "1789893392856#e43751f7"
+    },
+    {
+      "payload": {
+        "stage": "decide",
+        "guard": "evidence_sufficiency",
+        "applied_confidence": 0.45,
+        "reason": "insufficient evidence: data_points=1 < 3 required to act",
+        "model_confidence": 0.8
+      },
+      "ts": 1789893392862,
+      "kind": "constraint",
+      "finding_id": "f-1ee9edc5a4",
+      "ts_seq": "1789893392862#59ffb280"
+    },
+    {
+      "payload": {
+        "reason": "policy route=ESCALATE, model=escalate, conf=0.45",
+        "from": "Decided",
+        "to": "Escalated",
+        "version": 3
+      },
+      "ts": 1789893392867,
+      "kind": "transition",
+      "finding_id": "f-1ee9edc5a4",
+      "ts_seq": "1789893392867#e2a0c03d"
+    }
+  ]
+}

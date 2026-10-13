@@ -1,0 +1,630 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Boardagents — your board, on call</title>
+<style>
+:root{
+  --bg:#f4f4f2; --panel:#ffffff; --panel2:#f7f7f5; --line:#e2e2de; --text:#1a1a18;
+  --dim:#6b6f66; --green:#1d7a3f; --red:#b3261e; --amber:#8a5a00; --blue:#1a56db;
+  --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);
+  font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+a{color:var(--blue)}
+header{position:sticky;top:0;z-index:10;background:#ffffff;border-bottom:1px solid var(--line);
+  padding:14px 24px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+h1{font-size:20px;margin:0;letter-spacing:-.02em}
+h1 span{color:var(--blue)}
+.badge{font-size:12px;color:var(--dim);border:1px solid var(--line);border-radius:999px;padding:4px 11px;white-space:nowrap}
+.badge.real{border-color:#bcd8c2;color:var(--green)}
+.badge.sim{border-color:#e3d3a3;color:var(--amber)}
+.badge.warn{border-color:#e5b4b0;color:var(--red)}
+button{background:#fff;color:var(--text);border:1px solid #cfcfc8;border-radius:9px;
+  padding:9px 14px;font-size:14px;font-weight:500;cursor:pointer;transition:.15s}
+button:hover{border-color:var(--blue)}
+button:disabled{opacity:.45;cursor:not-allowed}
+button.primary{background:var(--blue);border-color:var(--blue);color:#fff}
+button.ok{background:var(--green);border-color:var(--green);color:#fff}
+button.no{background:#fff;border-color:var(--red);color:var(--red)}
+main{display:grid;grid-template-columns:minmax(330px,410px) 1fr;gap:18px;padding:18px 24px 60px;align-items:start}
+@media(max-width:1000px){main{grid-template-columns:1fr}}
+.col{display:grid;gap:16px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+.card h2{font-size:13px;text-transform:uppercase;letter-spacing:.09em;color:var(--dim);margin:0 0 12px}
+.muted{color:var(--dim)}
+.small{font-size:13px}
+.mono{font-family:var(--mono);font-size:12.5px}
+textarea{width:100%;min-height:88px;background:#fbfbfa;color:var(--text);border:1px solid #cfcfc8;
+  border-radius:10px;padding:11px 13px;font:15px/1.5 inherit;resize:vertical}
+textarea:focus{outline:none;border-color:var(--blue)}
+.row{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+.row.end{justify-content:flex-end}
+.stack{display:grid;gap:10px}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11.5px;font-weight:600;
+  border:1px solid var(--line);color:var(--dim)}
+.pill.aye{background:#e3f2e7;border-color:#b3d9bd;color:var(--green)}
+.pill.nay{background:#f9e3e1;border-color:#e0a9a4;color:var(--red)}
+.pill.conditional{background:#f7ecd2;border-color:#e0c67f;color:var(--amber)}
+.pill.abstain{background:#eceef2;border-color:#c3c9d4;color:#4a5568}
+.pill.sensitive{background:#f9e3e1;border-color:#e0a9a4;color:var(--red)}
+.pill.low{background:#e3f2e7;border-color:#b3d9bd;color:var(--green)}
+.pill.override{background:#f7ecd2;border-color:#e0c67f;color:var(--amber)}
+.pill.grey{background:#eceef2;border-color:#c3c9d4;color:#4a5568}
+.item{border:1px solid var(--line);border-radius:11px;padding:11px 13px;cursor:pointer;transition:.15s;background:var(--panel2)}
+.item:hover{border-color:var(--blue)}
+.item.active{border-color:var(--blue);box-shadow:0 0 0 1px var(--blue) inset}
+.item .top{display:flex;gap:8px;align-items:center;justify-content:space-between}
+.item .topic{font-size:14.5px;font-weight:600;margin:4px 0 3px;line-height:1.35}
+.stepper{display:flex;flex-wrap:wrap;gap:3px;font-size:10.5px;margin-top:7px;font-family:var(--mono)}
+.stepper b{font-weight:600;padding:1px 5px;border-radius:4px;border:1px solid transparent;color:var(--dim);opacity:.5}
+.stepper b.done{color:var(--green);opacity:.9}
+.stepper b.here{opacity:1;color:#fff;background:var(--blue);border-color:var(--blue)}
+.bar{height:9px;border-radius:6px;background:#ececea;border:1px solid var(--line);overflow:hidden;margin:5px 0}
+.bar i{display:block;height:100%;background:var(--green)}
+.bar.amber i{background:var(--amber)}
+.bar.red i{background:var(--red)}
+.turn{border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:var(--panel2)}
+.turn .head{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-bottom:7px}
+.turn .role{font-weight:700;font-size:15px}
+.ev{font-family:var(--mono);font-size:11.5px;color:var(--green);background:#eef6f0;border:1px solid #c4ddc9;
+  border-radius:6px;padding:2px 7px;display:inline-block;margin:2px 4px 0 0}
+.ev.bad{color:var(--red);background:#faeeed;border-color:#e0a9a4}
+.callout{border-radius:11px;padding:11px 14px;border:1px solid}
+.callout.override{background:#faf3e3;border-color:#e0c67f}
+.callout.ok{background:#eef6f0;border-color:#b3d9bd}
+.callout.bad{background:#faeeed;border-color:#e0a9a4}
+.callout.info{background:#edf2fc;border-color:#b9cdf0}
+.diff{font-family:var(--mono);font-size:12px;background:#fbfbfa;border:1px solid var(--line);
+  border-radius:9px;padding:10px 12px;max-height:340px;overflow:auto;white-space:pre-wrap;line-height:1.45}
+.diff .add{color:var(--green)}
+.diff .del{color:var(--red)}
+.check{display:flex;gap:9px;align-items:baseline;padding:5px 0;border-bottom:1px dashed var(--line);font-size:13.5px}
+.check:last-child{border-bottom:none}
+.check .mark{font-weight:700;width:16px}
+.check.pass .mark{color:var(--green)}
+.check.fail .mark{color:var(--red)}
+.timeline{display:grid;gap:4px}
+.tl{display:flex;gap:9px;align-items:baseline;font-size:13px;padding:4px 0;border-bottom:1px dashed var(--line)}
+.tl .k{font-family:var(--mono);font-size:11px;min-width:92px;color:var(--dim)}
+.tag{font-family:var(--mono);font-size:11px;background:var(--panel2);border:1px solid var(--line);
+  border-radius:5px;padding:1px 6px;color:#4a5568}
+.empty{color:var(--dim);font-size:14px;padding:10px 0}
+.spin{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green);
+  animation:pl 1.2s infinite;vertical-align:middle}
+@keyframes pl{0%,100%{opacity:1}50%{opacity:.22}}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--dim)}
+.guide ol{margin:6px 0 0;padding-left:20px;font-size:13.5px}
+.guide li{margin:4px 0}
+.guide code{font-family:var(--mono);font-size:12px;background:var(--panel2);border:1px solid var(--line);border-radius:5px;padding:0 5px}
+h3{font-size:15px;margin:16px 0 6px}
+h3:first-child{margin-top:0}
+</style>
+</head>
+<body>
+<header>
+  <h1>Board<span>agents</span></h1>
+  <span class="badge real">board room · real context</span>
+  <span class="badge sim">A/B/C use the simulated Lumen Labs fixture</span>
+  <span class="badge" id="pauseBadge"></span>
+  <span class="badge" id="liveBadge"><span class="spin"></span> live</span>
+  <div class="row" style="margin-left:auto">
+    <button onclick="inject('A')">A · dependency</button>
+    <button onclick="inject('B')">B · billing</button>
+    <button onclick="inject('C')">C · usage</button>
+    <button onclick="admin('pause')">Pause</button>
+    <button onclick="admin('resume')">Resume</button>
+    <button onclick="admin('reset')">Reset</button>
+  </div>
+</header>
+<main>
+  <div class="col">
+    <div class="card guide">
+      <h2>What is this · try it in 60 seconds</h2>
+      <div class="small">Boardagents is an <b>autonomous board member for founders who have no board</b>.
+      Five agents watch company signals, research them, debate, act only when the risk rules
+      allow it, verify with real tests, and log everything.</div>
+      <ol>
+        <li>Type a decision below and hit <b>Put it to the board</b> — four agent seats vote.</li>
+        <li>Or click <b>A</b>, <b>B</b>, <b>C</b> to run a scripted scenario (low-risk fix, sensitive billing, ambiguous dip).</li>
+        <li>Click any item to read its summary, votes, patch diff, governance checklist and audit trail.</li>
+      </ol>
+      <div class="small muted">Built with Python + AWS Lambda, DynamoDB, S3, EventBridge and Bedrock models.
+      Research via Querit, enrichment via Glasser, page fetches via Apify, test sandboxes on Tenki,
+      stage pipelines on RocketRide, product review via Prelint. Demo data: Lumen Labs is simulated.</div>
+    </div>
+    <div class="card">
+      <h2>Ask your board</h2>
+      <textarea id="msg" placeholder="Put anything to the board: a question, a worry, what a customer just told you, a decision you are stuck on."></textarea>
+      <div class="row" style="margin-top:10px">
+        <button class="primary" id="askBtn" onclick="ask()">Put it to the board</button>
+        <button id="replyBtn" style="display:none" onclick="ask(true)">Reply in this thread</button>
+        <span class="small muted" id="hint"></span>
+      </div>
+      <div class="small muted" id="riskNote" style="margin-top:9px">
+        Risk is assigned by the policy engine from your topic, never by the model. Unknown topics are treated as sensitive.
+      </div>
+    </div>
+    <div class="card">
+      <h2>Meetings</h2>
+      <div class="stack" id="meetings"></div>
+    </div>
+    <div class="card">
+      <h2>Signal findings</h2>
+      <div class="stack" id="findings"></div>
+    </div>
+  </div>
+  <div class="col" id="detail">
+    <div class="card"><div class="empty">Put something to the board, or inject a scenario A/B/C.</div></div>
+  </div>
+</main>
+<script>
+const S = {meetings: [], findings: [], sel: null, thread: null, token: null, lastAsk: 0};
+const FLOW = ['Ingested', 'Summarized', 'Deliberating', 'Decided', 'ActingDirect', 'Verifying', 'GovernanceReview', 'Closed'];
+const $ = id => document.getElementById(id);
+
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+async function j(url, opts) {
+  const r = await fetch(url, opts);
+  let body = null;
+  try { body = await r.json(); } catch (e) { body = {}; }
+  if (!r.ok) throw new Error((body && body.error) || ('HTTP ' + r.status));
+  return body;
+}
+const post = (url, body, headers) => j(url, {
+  method: 'POST',
+  headers: Object.assign({'Content-Type': 'application/json'}, headers || {}),
+  body: JSON.stringify(body || {})
+});
+function sel(kind, id) { return S.sel && S.sel.kind === kind && S.sel.id === id ? 'active' : ''; }
+
+function tallyHtml(t) {
+  if (!t || !t.cast) return '';
+  return ['aye','nay','conditional','abstain'].filter(k => t[k])
+    .map(k => `<span class="pill ${k}">${k} ${t[k]}</span>`).join(' ');
+}
+function stepper(state, withDeliberation) {
+  const flow = FLOW.filter(s => withDeliberation || s !== 'Deliberating');
+  const i = flow.indexOf(state);
+  const steps = flow.map((s, k) => {
+    const cls = i < 0 ? '' : (k < i ? 'done' : (k === i ? 'here' : ''));
+    return `<b class="${cls}">${s}</b>`;
+  }).join('');
+  const out = i < 0
+    ? `<div class="row" style="margin-top:6px"><span class="pill ${state === 'Escalated' ? 'nay' : 'conditional'}">${esc(state)}</span></div>`
+    : '';
+  return `<div class="stepper">${steps}</div>${out}`;
+}
+function bar(value, amberAt, redAt) {
+  const pct = Math.max(0, Math.min(1, Number(value) || 0)) * 100;
+  const cls = value == null ? '' : (value < redAt ? 'red' : (value < amberAt ? 'amber' : ''));
+  return `<div class="bar ${cls}"><i style="width:${pct.toFixed(0)}%"></i></div>`;
+}
+function bar(value, amberAt, redAt) {
+  const pct = Math.max(0, Math.min(1, Number(value) || 0)) * 100;
+  const cls = value == null ? '' : (value < redAt ? 'red' : (value < amberAt ? 'amber' : ''));
+  return `<div class="bar ${cls}"><i style="width:${pct.toFixed(0)}%"></i></div>`;
+}
+
+/* ---------------- polling + lists ---------------- */
+
+async function load() {
+  try {
+    const [m, f] = await Promise.all([j('/api/meetings'), j('/api/findings')]);
+    S.meetings = m.meetings || [];
+    S.findings = (f.findings || []).filter(x => x.finding_id && !String(x.finding_id).startsWith('__'));
+    $('pauseBadge').textContent = f.paused ? 'PAUSED — orchestration halted' : '';
+    $('pauseBadge').className = 'badge ' + (f.paused ? 'warn' : '');
+    renderMeetings();
+    renderFindings();
+    if (S.sel) await refreshDetail();
+  } catch (e) {
+    $('hint').textContent = 'load failed: ' + e.message;
+  }
+}
+
+function renderMeetings() {
+  const el = $('meetings');
+  if (!S.meetings.length) {
+    el.innerHTML = '<div class="empty">No sessions yet. Ask your board something above.</div>';
+    return;
+  }
+  el.innerHTML = S.meetings.map(m => `
+    <div class="item ${sel('meeting', m.meeting_id)}" onclick="select('meeting','${m.meeting_id}')">
+      <div class="top">
+        <span class="tag">round ${m.round || 1} · ${esc(m.meeting_id)}</span>
+        <span class="pill ${m.risk_tag}">${esc(m.risk_tag)}</span>
+      </div>
+      <div class="topic">${esc((m.topic || '').slice(0, 180))}</div>
+      <div class="row">
+        <span class="pill grey">${esc(m.status || '')}</span>
+        ${tallyHtml(m.tally)}
+      </div>
+    </div>`).join('');
+}
+
+function renderFindings() {
+  const el = $('findings');
+  if (!S.findings.length) {
+    el.innerHTML = '<div class="empty">No signal findings yet. Inject a scenario above.</div>';
+    return;
+  }
+  el.innerHTML = S.findings.map(f => {
+    const isBoard = f.mode === 'board';
+    return `
+    <div class="item ${sel('finding', f.finding_id)}" onclick="select('finding','${f.finding_id}')">
+      <div class="top">
+        <span class="tag">${esc(f.finding_id)}</span>
+        <span class="pill ${f.risk_tag}">${esc(f.risk_tag || '')}</span>
+      </div>
+      <div class="topic">${esc(isBoard ? 'board session' : (f.event_type || ''))}
+        ${f.scenario ? '<span class="tag">scenario ' + esc(f.scenario) + '</span>' : ''}</div>
+      ${stepper(f.state, isBoard)}
+      <div class="row" style="margin-top:6px">
+        ${f.route ? '<span class="tag">' + esc(f.route) + '</span>' : ''}
+        ${f.attempt_count ? '<span class="pill grey">' + f.attempt_count + ' attempt(s)</span>' : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function select(kind, id) {
+  S.sel = {kind: kind, id: id};
+  renderMeetings();
+  renderFindings();
+  await refreshDetail();
+}
+
+async function refreshDetail() {
+  if (!S.sel) return;
+  try {
+    if (S.sel.kind === 'meeting') {
+      const m = await j('/api/meetings/' + encodeURIComponent(S.sel.id));
+      S.thread = m.thread_id;
+      $('replyBtn').style.display = '';
+      $('replyBtn').textContent = 'Reply in round ' + ((m.round || 1) + 1);
+      $('detail').innerHTML = renderMeeting(m);
+    } else {
+      const f = await j('/api/findings/' + encodeURIComponent(S.sel.id));
+      $('detail').innerHTML = renderFinding(f);
+    }
+  } catch (e) {
+    $('detail').innerHTML = '<div class="card"><div class="empty">' + esc(e.message) + '</div></div>';
+  }
+}
+
+/* ---------------- actions ---------------- */
+
+async function ask(reply) {
+  const msg = $('msg').value.trim();
+  if (!msg) { $('hint').textContent = 'type something first'; return; }
+  $('askBtn').disabled = true;
+  $('hint').textContent = 'convening...';
+  try {
+    const body = {message: msg};
+    if (reply && S.thread) body.thread_id = S.thread;
+    const out = await post('/api/board', body);
+    $('msg').value = '';
+    $('hint').innerHTML = 'round ' + out.round + ' · risk <b>' + esc(out.risk_tag) +
+      '</b> (matched "' + esc(out.risk_basis || '-') + '" → ' + esc(out.topic_category) + ')';
+    S.thread = out.thread_id;
+    await load();
+    await select('meeting', out.meeting_id);
+  } catch (e) {
+    $('hint').textContent = 'could not convene: ' + e.message;
+  } finally {
+    $('askBtn').disabled = false;
+  }
+}
+
+async function inject(scenario) {
+  try {
+    const out = await post('/api/inject', {scenario: scenario});
+    $('hint').innerHTML = 'scenario ' + scenario + ' queued (' + esc(out.queued || '') + ')';
+  } catch (e) {
+    $('hint').textContent = 'inject failed: ' + e.message;
+  }
+}
+
+async function admin(action) {
+  if (!S.token) {
+    S.token = window.prompt('Admin token (kept in memory only):') || '';
+    if (!S.token) return;
+  }
+  try {
+    await post('/api/' + action, {}, {'X-Boardagents-Token': S.token});
+    await load();
+  } catch (e) {
+    S.token = null;
+    $('hint').textContent = action + ' failed: ' + e.message;
+  }
+}
+/* ---------------- meeting detail ---------------- */
+
+function diffHtml(text) {
+  return String(text || '(no diff recorded)').split('\n').map(l => {
+    const cls = (l.startsWith('+') && !l.startsWith('+++')) ? 'add'
+      : ((l.startsWith('-') && !l.startsWith('---')) ? 'del' : '');
+    return cls ? '<span class="' + cls + '">' + esc(l) + '</span>' : esc(l);
+  }).join('\n');
+}
+
+function turnHtml(t) {
+  const model = t.model_id || '';
+  const capped = t.model_confidence != null && t.confidence != null && t.confidence < t.model_confidence;
+  const ev = (t.evidence || []).map(e =>
+    '<span class="ev">' + esc(e.ref) + ' — "' + esc((e.quote || '').slice(0, 90)) + '"</span>').join('');
+  const bad = (t.ungrounded_refs || []).map(r =>
+    '<span class="ev bad">ungrounded: ' + esc(r) + '</span>').join('');
+  return `
+  <div class="turn">
+    <div class="head">
+      <span class="role">${esc(t.role)}</span>
+      <span class="tag">${esc(model)}</span>
+      <span class="pill ${esc(t.vote)}">${esc(t.vote)}</span>
+      ${t.confidence != null ? '<span class="tag">confidence ' + Number(t.confidence).toFixed(2) + '</span>' : ''}
+      ${capped ? '<span class="pill override">capped from ' + Number(t.model_confidence).toFixed(2) + '</span>' : ''}
+      ${t.latency_ms ? '<span class="tag">' + t.latency_ms + 'ms</span>' : ''}
+    </div>
+    <div><b>${esc(t.position || '')}</b></div>
+    ${t.reasoning ? '<div class="small muted" style="margin-top:4px">' + esc(t.reasoning) + '</div>' : ''}
+    ${t.confidence != null ? bar(t.confidence, 0.85, 0.6) : ''}
+    <div style="margin-top:6px">${ev}${bad}</div>
+    ${(t.concerns || []).length ? '<div class="small" style="margin-top:6px">' +
+      (t.concerns || []).map(c => '<div class="muted">· ' + esc(c) + '</div>').join('') + '</div>' : ''}
+  </div>`;
+}
+
+function actionItemsHtml(f) {
+  const attempts = f.attempts || [];
+  if (!attempts.length) return '<div class="empty">No code action was taken for this session.</div>';
+  return attempts.map(a => `
+    <div class="turn" style="margin-bottom:10px">
+      <div class="head">
+        <span class="role">Attempt ${a.attempt}</span>
+        <span class="pill ${a.passed ? 'aye' : 'nay'}">${a.passed ? 'tests GREEN' : 'tests RED'}</span>
+        <span class="tag">exit ${a.exit_code}</span>
+        ${a.duration_s != null ? '<span class="tag">' + a.duration_s + 's</span>' : ''}
+        ${a.tests_unmodified ? '<span class="pill grey">tests untouched</span>' : ''}
+      </div>
+      <div class="small muted">files: ${(a.applied_files || []).map(x => '<span class="tag">' + esc(x) + '</span>').join(' ') || 'none'}</div>
+      ${(a.failing_test_names || a.failed || []).length ? '<div class="small" style="margin-top:5px;color:var(--red)">failing: ' +
+        esc((a.failing_test_names || a.failed).join(', ')) + '</div>' : ''}
+      <div class="diff" style="margin-top:8px">${diffHtml(a.diff_text)}</div>
+      ${a.output_tail ? '<details style="margin-top:8px"><summary class="small muted">pytest output</summary><div class="diff" style="margin-top:6px">' + esc(a.output_tail) + '</div></details>' : ''}
+    </div>`).join('');
+}
+
+function governanceHtml(f) {
+  const gov = f.governance || {};
+  const checks = gov.checks || [];
+  if (!checks.length) return '<div class="empty">Governance has not run for this finding.</div>';
+  return checks.map(c => `
+    <div class="check ${c.pass ? 'pass' : 'fail'}">
+      <span class="mark">${c.pass ? '✓' : '✗'}</span>
+      <span><b>${esc(c.check)}</b> <span class="muted">— ${esc(c.reason || '')}</span></span>
+    </div>`).join('');
+}
+
+function auditHtml(audit) {
+  if (!audit || !audit.length) return '<div class="empty">No audit rows.</div>';
+  return audit.map(a => {
+    if (a.kind === 'llm_call') {
+      return `<div class="tl"><span class="k">llm_call</span><span>` +
+        `<b>${esc(a.stage)}</b> <span class="tag">${esc(a.model_id)}</span> ` +
+        `<span class="muted">${a.latency_ms || 0}ms · in ${a.tokens_in || 0} · out ${a.tokens_out || 0}</span></span></div>`;
+    }
+    if (a.kind === 'transition') {
+      return `<div class="tl"><span class="k">transition</span><span>${esc(a.payload && a.payload.from)} → <b>${esc(a.payload && a.payload.to)}</b> <span class="muted">${esc((a.payload && a.payload.reason) || '')}</span></span></div>`;
+    }
+    if (a.kind === 'board_turn') {
+      return `<div class="tl"><span class="k">board_turn</span><span><b>${esc(a.payload && a.payload.role)}</b> voted ${esc(a.payload && a.payload.vote)} <span class="tag">${esc(a.payload && a.payload.model_id)}</span></span></div>`;
+    }
+    if (a.kind === 'policy_override') {
+      return `<div class="tl"><span class="k">override</span><span>model said <b>${esc(a.payload && a.payload.model_suggested)}</b>, policy imposed <b>${esc(a.payload && a.payload.policy_route)}</b> <span class="muted">(${esc(a.payload && a.payload.risk_tag)})</span></span></div>`;
+    }
+    if (a.kind === 'constraint') {
+      return `<div class="tl"><span class="k">constraint</span><span>${esc(a.payload && a.payload.guard)} <span class="muted">${esc(a.payload && a.payload.reason || '')}</span></span></div>`;
+    }
+    return `<div class="tl"><span class="k">${esc(a.kind)}</span><span class="muted">${esc(JSON.stringify(a.payload || {}).slice(0, 190))}</span></div>`;
+  }).join('');
+}
+function fmt(ms) {
+  if (!ms) return '-';
+  try { return new Date(Number(ms)).toLocaleTimeString(); } catch (e) { return String(ms); }
+}
+
+function decisionsCard(f, dec, override, constraints) {
+  return `
+    <div class="card">
+      <h2>Decision and policy</h2>
+      <div class="row">
+        <span class="tag">route ${esc(f.route || dec.suggested_action || '-')}</span>
+        <span class="pill ${esc(f.risk_tag)}">risk ${esc(f.risk_tag)}</span>
+        ${dec.model_confidence != null ? '<span class="tag">model said ' + Number(dec.model_confidence).toFixed(2) + '</span>' : ''}
+        ${dec.confidence != null ? '<span class="tag">applied ' + Number(dec.confidence).toFixed(2) + '</span>' : ''}
+      </div>
+      ${dec.confidence != null ? bar(dec.confidence, 0.85, 0.6) : ''}
+      ${override ? '<div class="callout override" style="margin-top:10px"><b>Policy overruled the model</b>' +
+        '<div class="small">Suggested <b>' + esc(override.payload.model_suggested) + '</b>, policy imposed <b>' +
+        esc(override.payload.policy_route) + '</b>, because this topic is <b>' + esc(override.payload.risk_tag) +
+        '</b>.</div></div>' : ''}
+      ${(constraints || []).map(c => '<div class="callout info" style="margin-top:8px"><b>Deterministic guard: ' +
+        esc(c.payload.guard) + '</b><div class="small">' + esc(c.payload.reason || '') + '</div></div>').join('')}
+    </div>`;
+}
+
+function approvalsCard(f, m) {
+  const list = (m && m.approvals) || [];
+  const rows = list.length
+    ? list.map(a => '<div class="tl"><span class="k">' + esc(a.action) + '</span><span>' + esc(a.by) +
+        ' <span class="muted">' + esc(fmt(a.ts)) + (a.note ? ' — ' + esc(a.note) : '') + '</span></span></div>').join('')
+    : '<div class="empty">No human approval was required.</div>';
+  const pending = f.state === 'AwaitingApproval';
+  return `
+    <div class="card">
+      <h2>Human approval</h2>
+      <div class="timeline">${rows}</div>
+      ${pending ? `
+      <div style="margin-top:12px">
+        <input id="note" placeholder="note for the minute (optional)"
+          style="width:100%;background:#0c1219;color:var(--text);border:1px solid var(--line);border-radius:9px;padding:9px 12px;font:14px inherit">
+        <div class="row" style="margin-top:9px">
+          <button class="ok" onclick="decide('${esc(f.finding_id)}', true)">Approve</button>
+          <button class="no" onclick="decide('${esc(f.finding_id)}', false)">Reject</button>
+          <span class="small muted">Nothing sensitive is ever acted on without this.</span>
+        </div>
+      </div>` : ''}
+    </div>`;
+}
+
+function costCard(m, audit) {
+  const cost = (m && m.cost) || {};
+  const llms = (audit || []).filter(a => a.kind === 'llm_call');
+  const byStage = {};
+  llms.forEach(a => { byStage[a.stage] = a.model_id; });
+  return `
+    <div class="card">
+      <h2>Cost and model routing</h2>
+      <div class="row">
+        <span class="tag">tokens in ${cost.tokens_in || 0}</span>
+        <span class="tag">tokens out ${cost.tokens_out || 0}</span>
+        <span class="tag">model time ${cost.latency_ms || 0} ms</span>
+      </div>
+      <div class="small muted" style="margin-top:8px">Model per stage, as recorded in the audit log:</div>
+      <div class="row" style="margin-top:5px">
+        ${Object.keys(byStage).sort().map(s => '<span class="tag">' + esc(s) + ' → ' + esc(byStage[s]) + '</span>').join('') || '<span class="muted">no calls yet</span>'}
+      </div>
+    </div>`;
+}
+function renderMeeting(m) {
+  const f = m.finding || {};
+  const audit = m.audit || [];
+  const dec = m.decision || f.decision || {};
+  const res = m.resolution || {};
+  const override = audit.filter(a => a.kind === 'policy_override')[0];
+  const constraints = audit.filter(a => a.kind === 'constraint');
+  const turns = m.turns || [];
+  return `
+  <div class="card">
+    <div class="row" style="justify-content:space-between">
+      <h2 style="margin:0">Board session · round ${m.round || 1}</h2>
+      <div class="row">
+        <span class="pill ${esc(m.risk_tag)}">risk ${esc(m.risk_tag)}</span>
+        <span class="pill grey">${esc(m.status)}</span>
+        ${m.outcome ? '<span class="tag">' + esc(m.outcome) + '</span>' : ''}
+      </div>
+    </div>
+    <div style="font-size:17px;font-weight:600;margin:9px 0 4px">${esc(m.topic)}</div>
+    <div class="small muted">${esc(m.meeting_id)} · thread ${esc(m.thread_id)} · convened ${fmt(m.convened_at)}
+      ${m.adjourned_at ? '· adjourned ' + fmt(m.adjourned_at) : ''}</div>
+    <div class="small muted">topic category <b>${esc(m.topic_category || '-')}</b> — risk assigned by policy, never by the model</div>
+    <div class="row" style="margin-top:11px">
+      <a href="/api/meetings/${esc(m.meeting_id)}/minutes.md" target="_blank"><button>Minutes (markdown)</button></a>
+      ${m.minutes_s3_key ? '<span class="tag">' + esc(m.minutes_s3_key) + '</span>' : ''}
+      ${f.finding_id ? '<span class="tag">finding ' + esc(f.finding_id) + '</span>' : ''}
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Present</h2>
+    <div class="timeline">
+      ${turns.map(t => '<div class="tl"><span class="k">' + esc(t.role) + '</span><span>' +
+        '<span class="tag">' + esc(t.model_id) + '</span> ' +
+        '<span class="pill ' + esc(t.vote) + '">' + esc(t.vote) + '</span> ' +
+        '<span class="muted">confidence ' + (t.confidence != null ? Number(t.confidence).toFixed(2) : '-') +
+        '</span></span></div>').join('') || '<div class="empty">Nobody has spoken yet.</div>'}
+    </div>
+    ${m.tally && m.tally.cast ? '<div class="row" style="margin-top:10px">' + tallyHtml(m.tally) + '</div>' : ''}
+  </div>
+
+  <div class="card">
+    <h2>Deliberation</h2>
+    <div class="stack">
+      ${turns.map(turnHtml).join('') || '<div class="empty">The board has not convened yet.</div>'}
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Resolution</h2>
+    <div><b>${esc(res.motion || '')}</b></div>
+    <div style="margin-top:6px">${esc(res.recommendation || dec.rationale || '')}</div>
+    ${(res.consensus || []).length ? '<h3>Consensus</h3>' +
+      (res.consensus || []).map(c => '<div class="small">· ' + esc(c) + '</div>').join('') : ''}
+    ${(res.dissent || []).length ? '<h3>Dissent — recorded, never averaged away</h3>' +
+      (res.dissent || []).map(c => '<div class="small" style="color:var(--amber)">· ' + esc(c) + '</div>').join('') : ''}
+  </div>
+
+  ${decisionsCard(f, dec, override, constraints)}
+  <div class="card"><h2>Action and verification</h2>${actionItemsHtml(f)}</div>
+  <div class="card"><h2>Governance checklist</h2>${governanceHtml(f)}</div>
+  ${approvalsCard(f, m)}
+  ${costCard(m, audit)}
+  <div class="card"><h2>Audit timeline</h2><div class="timeline">${auditHtml(audit)}</div></div>`;
+}
+function renderFinding(f) {
+  const audit = f.audit || [];
+  const dec = f.decision || {};
+  const override = audit.filter(a => a.kind === 'policy_override')[0];
+  const constraints = audit.filter(a => a.kind === 'constraint');
+  const sum = f.summary || {};
+  const ev = (sum.evidence || []).map(e =>
+    '<span class="ev">' + esc(e.ref) + ' — "' + esc((e.quote || '').slice(0, 110)) + '"</span>').join('');
+  const head = f.mode === 'board'
+    ? 'Board session (also recorded as a meeting)'
+    : 'Signal finding · scenario ' + esc(f.scenario || '-');
+  return `
+  <div class="card">
+    <div class="row" style="justify-content:space-between">
+      <h2 style="margin:0">${esc(f.finding_id)}</h2>
+      <div class="row">
+        <span class="pill ${esc(f.risk_tag)}">risk ${esc(f.risk_tag)}</span>
+        <span class="pill grey">${esc(f.state)}</span>
+      </div>
+    </div>
+    <div class="small muted">${head} · ${esc(f.event_type || '')} · source ${esc(f.source || '-')}</div>
+    ${stepper(f.state, f.mode === 'board')}
+    ${f.scenario ? '<div class="callout info" style="margin-top:10px"><b>Simulated data.</b> ' +
+      'Scenarios A/B/C run against the Lumen Labs fixture, for testing the loop. ' +
+      'Board sessions use the real corpus.</div>' : ''}
+  </div>
+
+  <div class="card">
+    <h2>Summary</h2>
+    <div>${esc(sum.what_happened || 'not summarised yet')}</div>
+    ${sum.why_it_matters ? '<div class="small muted" style="margin-top:5px">' + esc(sum.why_it_matters) + '</div>' : ''}
+    ${sum.confidence != null ? bar(sum.confidence, 0.85, 0.6) : ''}
+    <div style="margin-top:6px">${ev}</div>
+    ${sum.evidence_refs_validated === false ? '<div class="callout bad" style="margin-top:9px"><b>Confidence capped</b><div class="small">A cited evidence ref did not exist in the event payload.</div></div>' : ''}
+  </div>
+
+  ${decisionsCard(f, dec, override, constraints)}
+  <div class="card"><h2>Attempts and verification</h2>${actionItemsHtml(f)}</div>
+  <div class="card"><h2>Governance checklist</h2>${governanceHtml(f)}</div>
+  ${approvalsCard(f, null)}
+  <div class="card"><h2>Audit timeline</h2><div class="timeline">${auditHtml(audit)}</div></div>`;
+}
+
+async function decide(findingId, approved) {
+  const note = ($('note') && $('note').value) || '';
+  try {
+    await post('/api/findings/' + encodeURIComponent(findingId) + (approved ? '/approve' : '/reject'), {note: note});
+    $('hint').textContent = approved ? 'approved; resuming the action loop' : 'rejected; draft closed';
+    await load();
+  } catch (e) {
+    $('hint').textContent = 'could not record your decision: ' + e.message;
+  }
+}
+
+/* ---------------- boot ---------------- */
+load();
+setInterval(load, 2000);
+document.addEventListener('keydown', e => {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') ask(!!S.thread);
+});
+</script>
+</body>
+</html>
