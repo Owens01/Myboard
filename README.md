@@ -2,7 +2,7 @@
 
 **An autonomous board member for founders who have no board.**
 
-A solo founder or student startup has no CTO, no CFO, and nobody to sanity-check a decision
+A solo founder or student startup has no CTO, no CFO, and nobody to sanity check a decision
 at 2 a.m. Boardagents watches company signals, summarizes them into findings with evidence
 and confidence, decides what to do, acts autonomously **only when the risk tag allows it**,
 verifies its own work by running real tests, passes everything through a governance
