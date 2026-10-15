@@ -57,8 +57,8 @@ MIN_DATA_POINTS = 3
 
 
 # ---- topics (founder-initiated board sessions) ----------------------------
-# The founder can put ANYTHING to the board. The topic category - and therefore
-# the risk tag - is assigned DETERMINISTICALLY by keyword. The model never picks
+# The founder can put ANYTHING to the board. The topic category and therefore
+# the risk tag is assigned DETERMINISTICALLY by keyword. The model never picks
 # the risk. Unknown topics fail closed to 'sensitive'.
 # Order matters: the money/security/legal families are checked first so a mixed
 # message ("cheaper mailkit upgrade") stays sensitive rather than slipping to low.
