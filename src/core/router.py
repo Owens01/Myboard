@@ -30,7 +30,7 @@ class CallCapExceeded(Exception):
     pass
 
 
-# ---------------------------------------------------------------- FakeLLM
+# --------------------------------- FakeLLM
 
 def _fake_response(stage, request, finding=None, ctx=None):
     """Canned structured outputs per stage, so the pipeline is testable offline."""
@@ -85,7 +85,7 @@ def _fake_response(stage, request, finding=None, ctx=None):
     return LLMResponse(json.dumps(body), 'fake-model', {'inputTokens': 0, 'outputTokens': 0}, 0, 'end_turn')
 
 
-# ---------------------------------------------------------------- Bedrock (mantle, OpenAI-compatible)
+# ---------------------------------- Bedrock (mantle, OpenAI-compatible)
 # The Bedrock API key is a *mantle* bearer token, so inference goes through
 # {bedrock_endpoint}/chat/completions (OpenAI-compatible) rather than the
 # native /model/{id}/converse path. Stdlib only: no SDK, no signing.
