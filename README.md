@@ -6,7 +6,7 @@ A solo founder or student startup has no CTO, no CFO, and nobody to sanity check
 at 2 a.m. Boardagents watches company signals, summarizes them into findings with evidence
 and confidence, decides what to do, acts autonomously **only when the risk tag allows it**,
 verifies its own work by running real tests, passes everything through a governance
-checklist, and logs every step. Anything sensitive is drafted for human approval — never
+checklist, and logs every step. Anything sensitive is drafted for human approval never
 acted on alone, no matter how confident the model claims to be.
 
 > **Lumen Labs, the company in the demo, is simulated.** All data, events and code in
